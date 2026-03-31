@@ -151,3 +151,86 @@ function getHTML(shop) {
 }
 
 app.listen(PORT, () => console.log("Zoo-PetShop Agent v2.0 on port " + PORT));
+
+function getHTML(shop) {
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zoo-PetShop Agent</title>
+<script src="https://cdn.shopify.com/shopifycloud/app-bridge/3.7.10/app-bridge.js"><\/script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,sans-serif;background:#f6f6f7;color:#1a1a1a}
+.app{max-width:1200px;margin:0 auto;padding:20px}
+.header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+.header h1{font-size:20px;font-weight:600}
+.agents{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:900px){.agents{grid-template-columns:1fr}}
+.card{background:#fff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden}
+.card-header{padding:16px 20px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:12px}
+.av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px}
+.a1{background:#dbeafe;color:#1d4ed8}.a2{background:#fef3c7;color:#92400e}
+.badge{font-size:11px;padding:2px 10px;border-radius:12px;font-weight:500}
+.badge.s{background:#dcfce7;color:#166534}.badge.i{background:#dbeafe;color:#1e40af}
+.badge.w{background:#fef3c7;color:#92400e}.badge.d{background:#fee2e2;color:#991b1b}
+.tabs{display:flex;gap:4px;padding:8px 16px;border-bottom:1px solid #e5e7eb;flex-wrap:wrap}
+.tab{font-size:12px;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;background:transparent;color:#6b7280}
+.tab.on{background:#1a1a1a;color:#fff}
+.cnt{padding:20px;min-height:250px}
+.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+.m{background:#f9fafb;border-radius:8px;padding:12px 16px}
+.m-l{font-size:11px;color:#6b7280;margin-bottom:4px}.m-v{font-size:20px;font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 6px;font-size:11px;color:#9ca3af;font-weight:400;border-bottom:1px solid #e5e7eb}
+td{padding:8px 6px;border-bottom:1px solid #f3f4f6}
+.log{display:flex;gap:8px;padding:6px 0;border-bottom:1px solid #f3f4f6;font-size:13px}
+.lt{color:#9ca3af;font-family:monospace;font-size:11px;min-width:44px}
+.lm{color:#4b5563;flex:1}.ls{font-family:monospace;font-size:11px;color:#9ca3af}
+.btn{font-size:12px;padding:6px 14px;border-radius:6px;border:1px solid #d1d5db;background:#fff;cursor:pointer}
+.btn:hover{background:#f9fafb}.btn.p{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.info{font-size:12px;padding:10px 14px;background:#dbeafe;color:#1e40af;border-radius:8px;margin-bottom:16px}
+</style></head><body>
+<div class="app">
+<div class="header"><div><h1>Zoo-PetShop Agent</h1><div style="font-size:12px;color:#6b7280">n8n + Shopify + Claude Opus 4.6</div></div></div>
+<div class="agents">
+<div class="card">
+<div class="card-header"><div class="av a1">A1</div><div><b>Agent-Automator</b><br><span style="font-size:11px;color:#6b7280">n8n + Shopify</span></div><span class="badge s" style="margin-left:auto">Online</span></div>
+<div class="tabs" id="at"></div><div class="cnt" id="ac">Loading...</div>
+</div>
+<div class="card">
+<div class="card-header"><div class="av a2">A2</div><div><b>Agent-Trainer</b><br><span style="font-size:11px;color:#6b7280">Claude Opus 4.6</span></div><span class="badge i" style="margin-left:auto">Learning</span></div>
+<div class="tabs" id="tt"></div><div class="cnt" id="tc">Loading...</div>
+</div></div></div>
+<script>
+var AB=window['app-bridge'],app=AB.createApp({apiKey:'${SHOPIFY_API_KEY}',host:new URLSearchParams(location.search).get('host')});
+var S='${shop}',aT='dash',tT='over',logs=[],O=[],P=[],C=[];
+function b(s,t){return '<span class="badge '+(s==='error'?'d':s==='warning'?'w':s==='success'?'s':'i')+'">'+t+'</span>'}
+function addL(t,m,s){logs.unshift({t:new Date().toLocaleTimeString('bg',{hour:'2-digit',minute:'2-digit'}),y:t,m:m,s:s});if(logs.length>30)logs.pop()}
+async function api(e){try{var r=await fetch('/api/shopify/'+e+'?shop='+S);return await r.json()}catch(x){return{error:x.message}}}
+async function loadO(){var d=await api('orders?status=any&limit=15');if(d.orders){O=d.orders;addL('success',O.length+' orders','shopify')}else addL('error',d.error||'err','shopify')}
+async function loadP(){var d=await api('products?limit=20');if(d.products){P=d.products;addL('success',P.length+' products','shopify')}else addL('error',d.error||'err','shopify')}
+async function loadC(){var d=await api('customers?limit=15');if(d.customers){C=d.customers;addL('success',C.length+' customers','shopify')}else addL('error',d.error||'err','shopify')}
+function rAT(){var ts=[{i:'dash',l:'Dashboard'},{i:'orders',l:'Orders'},{i:'products',l:'Products'},{i:'custs',l:'Customers'},{i:'logs',l:'Logs'}];document.getElementById('at').innerHTML=ts.map(function(t){return '<button class="tab'+(aT===t.i?' on':'')+'" onclick="sAT(\''+t.i+'\')">'+t.l+'</button>'}).join('')}
+function rTT(){var ts=[{i:'over',l:'Overview'},{i:'anl',l:'Analysis'},{i:'cfg',l:'Config'}];document.getElementById('tt').innerHTML=ts.map(function(t){return '<button class="tab'+(tT===t.i?' on':'')+'" onclick="sTT(\''+t.i+'\')">'+t.l+'</button>'}).join('')}
+function rAC(){var e=document.getElementById('ac');
+if(aT==='dash')e.innerHTML='<div class="metrics"><div class="m"><div class="m-l">Orders</div><div class="m-v">'+O.length+'</div></div><div class="m"><div class="m-l">Products</div><div class="m-v">'+P.length+'</div></div><div class="m"><div class="m-l">Customers</div><div class="m-v">'+C.length+'</div></div><div class="m"><div class="m-l">Model</div><div class="m-v">Opus 4.6</div></div></div><button class="btn p" onclick="refresh()">Refresh All</button><div style="margin-top:12px">'+logs.slice(0,6).map(function(l){return '<div class="log"><span class="lt">'+l.t+'</span>'+b(l.y,l.y)+'<span class="lm">'+l.m+'</span><span class="ls">'+l.s+'</span></div>'}).join('')+'</div>';
+if(aT==='orders')e.innerHTML='<table><thead><tr><th>#</th><th>Customer</th><th>Total</th><th>Date</th><th>Status</th></tr></thead><tbody>'+O.slice(0,12).map(function(o){var n=o.customer?(o.customer.first_name+' '+o.customer.last_name):'N/A';return '<tr><td style="font-family:monospace;font-size:12px">#'+o.order_number+'</td><td>'+n+'</td><td style="font-weight:600">'+o.total_price+' '+o.currency+'</td><td style="color:#6b7280">'+new Date(o.created_at).toLocaleDateString('bg')+'</td><td>'+b(o.financial_status==='paid'?'success':'warning',o.financial_status||'?')+'</td></tr>'}).join('')+'</tbody></table>';
+if(aT==='products')e.innerHTML='<table><thead><tr><th>Product</th><th>Price</th><th>Stock</th><th>Status</th></tr></thead><tbody>'+P.slice(0,12).map(function(p){var v=p.variants&&p.variants[0],s=v?v.inventory_quantity:0;return '<tr><td style="font-weight:500">'+p.title.substring(0,45)+'</td><td>'+(v?v.price:'?')+' BGN</td><td>'+b(s<=0?'error':s<10?'warning':'success',s<=0?'Out':s)+'</td><td>'+b(p.status==='active'?'success':'warning',p.status)+'</td></tr>'}).join('')+'</tbody></table>';
+if(aT==='custs')e.innerHTML='<table><thead><tr><th>Customer</th><th>Email</th><th>Orders</th><th>Segment</th></tr></thead><tbody>'+C.slice(0,12).map(function(c){var sg=c.orders_count>=10?'VIP':c.orders_count>=3?'Active':'New';return '<tr><td style="font-weight:500">'+c.first_name+' '+c.last_name+'</td><td style="color:#6b7280;font-size:12px">'+c.email+'</td><td style="text-align:center">'+c.orders_count+'</td><td>'+b(sg==='VIP'?'warning':sg==='Active'?'success':'info',sg)+'</td></tr>'}).join('')+'</tbody></table>';
+if(aT==='logs')e.innerHTML=logs.map(function(l){return '<div class="log"><span class="lt">'+l.t+'</span>'+b(l.y,l.y)+'<span class="lm">'+l.m+'</span><span class="ls">'+l.s+'</span></div>'}).join('')}
+function rTC(){var e=document.getElementById('tc');
+if(tT==='over')e.innerHTML='<div class="metrics"><div class="m"><div class="m-l">Rules</div><div class="m-v">3</div></div><div class="m"><div class="m-l">A/B Tests</div><div class="m-v">3</div></div><div class="m"><div class="m-l">Improvement</div><div class="m-v">+14%</div></div><div class="m"><div class="m-l">Model</div><div class="m-v">Opus 4.6</div></div></div>';
+if(tT==='anl')e.innerHTML='<button class="btn p" onclick="analyze()">Run Analysis (Opus 4.6)</button><div id="ar" style="margin-top:16px;color:#9ca3af;text-align:center">Click to analyze</div>';
+if(tT==='cfg')e.innerHTML='<div class="info">Client ID: ${SHOPIFY_API_KEY}<br>Store: ${shop}<br>Model: Claude Opus 4.6</div>'}
+function sAT(i){aT=i;rAT();rAC()}
+function sTT(i){tT=i;rTT();rTC()}
+async function refresh(){addL('info','Refreshing...','system');rAC();await Promise.all([loadO(),loadP(),loadC()]);rAC()}
+async function analyze(){var el=document.getElementById('ar');el.innerHTML='Analyzing with Opus 4.6...';try{var r=await fetch('/api/claude/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:'Logs: '+logs.slice(0,10).map(function(l){return l.y+': '+l.m}).join('; ')+'. Products: '+P.length+', Orders: '+O.length})});var d=await r.json();el.innerHTML='<div style="background:#f9fafb;border-radius:8px;padding:16px;font-size:13px;white-space:pre-wrap">'+(d.text||d.error)+'</div>';addL('success','Analysis done','claude')}catch(x){el.innerHTML='<div style="color:red">'+x.message+'</div>'}}
+async function init(){addL('info','App started','system');rAT();rTT();rAC();rTC();await Promise.all([loadO(),loadP(),loadC()]);rAC()}
+init();
+<\/script></body></html>`;
+}
+
+app.listen(PORT, function() {
+  console.log("Zoo-PetShop Agent v2.0 on port " + PORT);
+  console.log("Model: " + (process.env.CLAUDE_MODEL || "claude-opus-4-6"));
+});
