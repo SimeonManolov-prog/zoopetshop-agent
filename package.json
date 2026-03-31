@@ -1,0 +1,18 @@
+{
+    "name": "zoopetshop-agent",
+    "version": "3.1.0",
+    "description": "Zoo-PetShop Shopify Embedded App with Claude AI",
+    "type": "module",
+    "main": "server.js",
+    "scripts": {
+          "start": "node server.js",
+          "dev": "node --watch server.js"
+    },
+    "dependencies": {
+          "better-sqlite3": "^11.7.0",
+          "express": "^4.21.0"
+    },
+    "engines": {
+          "node": ">=18.0.0"
+    }
+}
