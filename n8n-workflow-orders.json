@@ -1,0 +1,171 @@
+{
+  "name": "ZooPetShop - Order Processing Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "shopify-orders",
+        "responseMode": "onReceived",
+        "responseData": "allEntries"
+      },
+      "id": "webhook-orders",
+      "name": "Shopify Order Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.topic }}",
+              "operation": "equals",
+              "value2": "orders/create"
+            }
+          ]
+        }
+      },
+      "id": "if-new-order",
+      "name": "Is New Order?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "resource": "order",
+        "operation": "get",
+        "orderId": "={{ $json.id }}"
+      },
+      "id": "get-order-details",
+      "name": "Get Order Details",
+      "type": "n8n-nodes-base.shopify",
+      "typeVersion": 1,
+      "position": [690, 200],
+      "credentials": {
+        "shopifyApi": {
+          "id": "SHOPIFY_CREDENTIAL_ID",
+          "name": "ZooPetShop Shopify"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "product",
+        "operation": "get",
+        "productId": "={{ $json.line_items[0].product_id }}"
+      },
+      "id": "check-inventory",
+      "name": "Check Product Inventory",
+      "type": "n8n-nodes-base.shopify",
+      "typeVersion": 1,
+      "position": [690, 400],
+      "credentials": {
+        "shopifyApi": {
+          "id": "SHOPIFY_CREDENTIAL_ID",
+          "name": "ZooPetShop Shopify"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "orders@zoo-petshop.com",
+        "toEmail": "={{ $node['Get Order Details'].json.email }}",
+        "subject": "Потвърждение на поръчка #{{ $node['Get Order Details'].json.order_number }} - Zoo-PetShop",
+        "text": "Здравейте {{ $node['Get Order Details'].json.customer.first_name }},\n\nБлагодарим Ви за поръчката!\n\nПоръчка #{{ $node['Get Order Details'].json.order_number }}\nОбща сума: {{ $node['Get Order Details'].json.total_price }} {{ $node['Get Order Details'].json.currency }}\n\nЩе Ви уведомим когато поръчката бъде изпратена.\n\nС уважение,\nEкипът на Zoo-PetShop"
+      },
+      "id": "send-confirmation",
+      "name": "Send Order Confirmation",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [910, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.variants[0].inventory_quantity }}",
+              "operation": "smallerEqual",
+              "value2": 10
+            }
+          ]
+        }
+      },
+      "id": "low-stock-check",
+      "name": "Low Stock Alert?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [910, 400]
+    },
+    {
+      "parameters": {
+        "fromEmail": "alerts@zoo-petshop.com",
+        "toEmail": "simeon._.manolov@icloud.com",
+        "subject": "⚠️ Нисък инвентар: {{ $node['Check Product Inventory'].json.title }}",
+        "text": "Внимание! Продуктът \"{{ $node['Check Product Inventory'].json.title }}\" има само {{ $node['Check Product Inventory'].json.variants[0].inventory_quantity }} бройки.\n\nSKU: {{ $node['Check Product Inventory'].json.variants[0].sku }}\n\nМоля, заредете наново."
+      },
+      "id": "send-low-stock-alert",
+      "name": "Send Low Stock Alert",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1130, 400]
+    },
+    {
+      "parameters": {
+        "url": "https://YOUR_AGENT_URL/api/log",
+        "method": "POST",
+        "body": {
+          "type": "success",
+          "message": "Order #{{ $node['Get Order Details'].json.order_number }} processed - confirmation sent to {{ $node['Get Order Details'].json.email }}",
+          "source": "n8n",
+          "timestamp": "={{ $now.toISO() }}"
+        }
+      },
+      "id": "log-to-agent",
+      "name": "Log to Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1130, 200]
+    }
+  ],
+  "connections": {
+    "Shopify Order Webhook": {
+      "main": [
+        [{ "node": "Is New Order?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Is New Order?": {
+      "main": [
+        [
+          { "node": "Get Order Details", "type": "main", "index": 0 },
+          { "node": "Check Product Inventory", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Get Order Details": {
+      "main": [
+        [{ "node": "Send Order Confirmation", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Order Confirmation": {
+      "main": [
+        [{ "node": "Log to Agent", "type": "main", "index": 0 }]
+      ]
+    },
+    "Check Product Inventory": {
+      "main": [
+        [{ "node": "Low Stock Alert?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Low Stock Alert?": {
+      "main": [
+        [{ "node": "Send Low Stock Alert", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

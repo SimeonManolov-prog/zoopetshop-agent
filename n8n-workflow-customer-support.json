@@ -1,0 +1,173 @@
+{
+  "name": "ZooPetShop - Customer Support Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "customer-support",
+        "responseMode": "onReceived"
+      },
+      "id": "webhook-support",
+      "name": "Support Request Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "resource": "customer",
+        "operation": "search",
+        "query": "={{ $json.email }}"
+      },
+      "id": "find-customer",
+      "name": "Find Customer in Shopify",
+      "type": "n8n-nodes-base.shopify",
+      "typeVersion": 1,
+      "position": [470, 300],
+      "credentials": {
+        "shopifyApi": {
+          "id": "SHOPIFY_CREDENTIAL_ID",
+          "name": "ZooPetShop Shopify"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.orders_count }}",
+              "operation": "largerEqual",
+              "value2": 5
+            }
+          ]
+        }
+      },
+      "id": "is-vip",
+      "name": "Is VIP Customer?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.anthropic.com/v1/messages",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "x-api-key": "YOUR_CLAUDE_API_KEY",
+          "anthropic-version": "2023-06-01"
+        },
+        "body": {
+          "model": "claude-sonnet-4-20250514",
+          "max_tokens": 500,
+          "system": "You are a helpful customer support agent for Zoo-PetShop, a pet supplies store. Respond in Bulgarian. Be friendly and helpful. This is a VIP customer with many orders - give priority service.",
+          "messages": [
+            {
+              "role": "user",
+              "content": "Customer {{ $node['Find Customer in Shopify'].json.first_name }} {{ $node['Find Customer in Shopify'].json.last_name }} ({{ $json.orders_count }} orders, total spent: {{ $json.total_spent }}) asks: {{ $node['Support Request Webhook'].json.message }}"
+            }
+          ]
+        }
+      },
+      "id": "claude-vip-response",
+      "name": "Claude VIP Response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [910, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://api.anthropic.com/v1/messages",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json",
+          "x-api-key": "YOUR_CLAUDE_API_KEY",
+          "anthropic-version": "2023-06-01"
+        },
+        "body": {
+          "model": "claude-sonnet-4-20250514",
+          "max_tokens": 500,
+          "system": "You are a helpful customer support agent for Zoo-PetShop, a pet supplies store. Respond in Bulgarian. Be friendly and helpful.",
+          "messages": [
+            {
+              "role": "user",
+              "content": "Customer asks: {{ $node['Support Request Webhook'].json.message }}"
+            }
+          ]
+        }
+      },
+      "id": "claude-standard-response",
+      "name": "Claude Standard Response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [910, 400]
+    },
+    {
+      "parameters": {
+        "fromEmail": "support@zoo-petshop.com",
+        "toEmail": "={{ $node['Support Request Webhook'].json.email }}",
+        "subject": "Re: {{ $node['Support Request Webhook'].json.subject }} - Zoo-PetShop",
+        "text": "={{ $json.content[0].text }}"
+      },
+      "id": "send-support-reply",
+      "name": "Send Support Reply",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1130, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://YOUR_AGENT_URL/api/log",
+        "method": "POST",
+        "body": {
+          "type": "success",
+          "message": "Support ticket resolved for {{ $node['Support Request Webhook'].json.email }} via Claude AI",
+          "source": "n8n",
+          "timestamp": "={{ $now.toISO() }}"
+        }
+      },
+      "id": "log-support",
+      "name": "Log Support Action",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1350, 300]
+    }
+  ],
+  "connections": {
+    "Support Request Webhook": {
+      "main": [
+        [{ "node": "Find Customer in Shopify", "type": "main", "index": 0 }]
+      ]
+    },
+    "Find Customer in Shopify": {
+      "main": [
+        [{ "node": "Is VIP Customer?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Is VIP Customer?": {
+      "main": [
+        [{ "node": "Claude VIP Response", "type": "main", "index": 0 }],
+        [{ "node": "Claude Standard Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude VIP Response": {
+      "main": [
+        [{ "node": "Send Support Reply", "type": "main", "index": 0 }]
+      ]
+    },
+    "Claude Standard Response": {
+      "main": [
+        [{ "node": "Send Support Reply", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Support Reply": {
+      "main": [
+        [{ "node": "Log Support Action", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

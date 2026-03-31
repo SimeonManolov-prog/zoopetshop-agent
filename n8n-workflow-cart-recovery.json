@@ -1,0 +1,119 @@
+{
+  "name": "ZooPetShop - Abandoned Cart Recovery Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "shopify-carts",
+        "responseMode": "onReceived"
+      },
+      "id": "webhook-carts",
+      "name": "Cart Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "amount": 3,
+        "unit": "hours"
+      },
+      "id": "wait-3h",
+      "name": "Wait 3 Hours",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://zoo-petshop.com/admin/api/2026-01/checkouts/{{ $json.id }}.json",
+        "method": "GET",
+        "headers": {
+          "X-Shopify-Access-Token": "YOUR_ADMIN_API_TOKEN"
+        }
+      },
+      "id": "check-cart-status",
+      "name": "Check if Cart Still Abandoned",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.checkout.completed_at }}",
+              "operation": "isEmpty"
+            }
+          ]
+        }
+      },
+      "id": "still-abandoned",
+      "name": "Still Abandoned?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [910, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@zoo-petshop.com",
+        "toEmail": "={{ $json.checkout.email }}",
+        "subject": "Забравихте нещо в кошницата? 🐾 - Zoo-PetShop",
+        "text": "Здравейте,\n\nЗабелязахме, че оставихте артикули в кошницата си.\n\nОбща стойност: {{ $json.checkout.total_price }} {{ $json.checkout.currency }}\n\nЗавършете поръчката си тук:\n{{ $json.checkout.abandoned_checkout_url }}\n\nС уважение,\nEкипът на Zoo-PetShop 🐾"
+      },
+      "id": "send-recovery-email",
+      "name": "Send Recovery Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1130, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://YOUR_AGENT_URL/api/log",
+        "method": "POST",
+        "body": {
+          "type": "success",
+          "message": "Cart recovery email sent to {{ $json.checkout.email }}",
+          "source": "n8n",
+          "timestamp": "={{ $now.toISO() }}"
+        }
+      },
+      "id": "log-recovery",
+      "name": "Log Recovery",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1350, 200]
+    }
+  ],
+  "connections": {
+    "Cart Webhook": {
+      "main": [
+        [{ "node": "Wait 3 Hours", "type": "main", "index": 0 }]
+      ]
+    },
+    "Wait 3 Hours": {
+      "main": [
+        [{ "node": "Check if Cart Still Abandoned", "type": "main", "index": 0 }]
+      ]
+    },
+    "Check if Cart Still Abandoned": {
+      "main": [
+        [{ "node": "Still Abandoned?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Still Abandoned?": {
+      "main": [
+        [{ "node": "Send Recovery Email", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send Recovery Email": {
+      "main": [
+        [{ "node": "Log Recovery", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

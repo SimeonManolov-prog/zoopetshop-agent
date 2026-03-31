@@ -1,0 +1,105 @@
+{
+  "name": "ZooPetShop - Product Sync & Price Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "hours", "hoursInterval": 1 }]
+        }
+      },
+      "id": "cron-sync",
+      "name": "Every Hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "resource": "product",
+        "operation": "getAll",
+        "limit": 250
+      },
+      "id": "get-all-products",
+      "name": "Get All Products",
+      "type": "n8n-nodes-base.shopify",
+      "typeVersion": 1,
+      "position": [470, 300],
+      "credentials": {
+        "shopifyApi": {
+          "id": "SHOPIFY_CREDENTIAL_ID",
+          "name": "ZooPetShop Shopify"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.variants[0].inventory_quantity }}",
+              "operation": "equal",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "out-of-stock",
+      "name": "Out of Stock?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "alerts@zoo-petshop.com",
+        "toEmail": "simeon._.manolov@icloud.com",
+        "subject": "🚨 Изчерпан продукт: {{ $json.title }}",
+        "text": "Продуктът \"{{ $json.title }}\" (SKU: {{ $json.variants[0].sku }}) е напълно изчерпан!\n\nID: {{ $json.id }}\nПоследна актуализация: {{ $json.updated_at }}\n\nМоля, предприемете действие."
+      },
+      "id": "alert-out-of-stock",
+      "name": "Alert Out of Stock",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [910, 200]
+    },
+    {
+      "parameters": {
+        "url": "https://YOUR_AGENT_URL/api/sync-log",
+        "method": "POST",
+        "body": {
+          "type": "info",
+          "message": "Product sync complete - {{ $node['Get All Products'].json.length }} products checked",
+          "out_of_stock": "={{ $node['Out of Stock?'].json.length || 0 }}",
+          "source": "n8n",
+          "timestamp": "={{ $now.toISO() }}"
+        }
+      },
+      "id": "log-sync",
+      "name": "Log Sync Result",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [910, 400]
+    }
+  ],
+  "connections": {
+    "Every Hour": {
+      "main": [
+        [{ "node": "Get All Products", "type": "main", "index": 0 }]
+      ]
+    },
+    "Get All Products": {
+      "main": [
+        [{ "node": "Out of Stock?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Out of Stock?": {
+      "main": [
+        [{ "node": "Alert Out of Stock", "type": "main", "index": 0 }],
+        [{ "node": "Log Sync Result", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
