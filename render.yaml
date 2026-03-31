@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: zoopetshop-agent
+    runtime: node
+    buildCommand: npm install
+    startCommand: node server.js
+    disk:
+      name: zoopetshop-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
